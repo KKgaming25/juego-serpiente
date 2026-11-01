@@ -159,6 +159,9 @@ const INITIAL_SPEED = 230;
 const SPEED_INCREASE = 3;
 const MINIMUM_SPEED = 150;
 
+// Aumento de velocidad del 0,5 % cada 5 puntos.
+const SPEED_INCREASE_PER_5_POINTS = 0.005;
+    
 function speedForLevel(level) {
     return Math.max(
         MINIMUM_SPEED,
@@ -311,12 +314,17 @@ function startGame() {
 function startGameInterval() {
     clearInterval(gameInterval);
 
-    // La velocidad depende únicamente del nivel actual.
-    // Nunca se modifica ni se acumula al empezar otra partida.
-    const currentSpeed = speedForLevel(level);
+    const pointsInLevel = score % 50;
+    const speedBoost = Math.floor(pointsInLevel / 5);
+
+    const currentSpeed = Math.max(
+        MINIMUM_SPEED,
+        speedForLevel(level) /
+        Math.pow(1 + SPEED_INCREASE_PER_5_POINTS, speedBoost)
+    );
 
     gameInterval = setInterval(gameLoop, currentSpeed);
-}
+}}
 
 function togglePause() {
     if (!running || gameOver) return;
