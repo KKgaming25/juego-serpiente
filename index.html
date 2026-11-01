@@ -6,7 +6,9 @@
 <title>Snake - 15 niveles</title>
 
 <style>
-* { box-sizing: border-box; }
+* {
+    box-sizing: border-box;
+}
 
 body {
     margin: 0;
@@ -51,12 +53,11 @@ h1 {
 }
 
 #message {
-    min-height: 65px;
+    min-height: 55px;
     margin: 12px 0;
     font-size: 19px;
     font-weight: bold;
     color: #62e879;
-    line-height: 1.5;
 }
 
 button {
@@ -91,7 +92,9 @@ button:hover {
     font-size: 23px;
 }
 
-.empty { visibility: hidden; }
+.empty {
+    visibility: hidden;
+}
 
 #instructions {
     color: #c7d3dc;
@@ -109,16 +112,14 @@ button:hover {
 <h1>🐍 SNAKE</h1>
 
 <div id="info">
-    <span>Puntos: <span id="score">0</span>/50</span>
+    <span>Puntos: <span id="score">0</span></span>
     <span>Nivel: <span id="level">1</span>/15</span>
     <span>Récord: <span id="record">0</span></span>
 </div>
 
 <canvas id="game" width="600" height="600"></canvas>
 
-<div id="message">
-    Pulsa «Nueva partida» para empezar el nivel 1
-</div>
+<div id="message">Pulsa «Nueva partida» para empezar</div>
 
 <div>
     <button onclick="startGame()">Nueva partida</button>
@@ -136,15 +137,16 @@ button:hover {
 </div>
 
 <div id="instructions">
-    Ordenador: flechas o WASD para moverte.<br>
-    ESPACIO o P: pausar y reanudar.<br>
+    Ordenador: utiliza las flechas o WASD para moverte.<br>
+    Pulsa ESPACIO o P para pausar y reanudar.<br>
     Móvil: utiliza los botones o desliza el dedo sobre el tablero.<br>
-    Come manzanas y evita las minas y los obstáculos.
+    Come manzanas, evita las minas y los obstáculos.
 </div>
 
 </div>
 
 <script>
+
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 
@@ -159,9 +161,14 @@ const MINIMUM_SPEED = 150;
 // Aumento del 0,5 % cada 5 puntos.
 const SPEED_INCREASE_PER_5_POINTS = 0.005;
 
-// PROGRESIÓN
-const POINTS_PER_LEVEL = 50;
-const TOTAL_LEVELS = 15;
+function speedForLevel(level) {
+    return Math.max(
+        MINIMUM_SPEED,
+        INITIAL_SPEED - ((level - 1) * SPEED_INCREASE)
+    );
+}
+
+// VARIABLES DEL JUEGO
 
 let snake;
 let direction;
@@ -172,41 +179,36 @@ let mines = [];
 let obstacles = [];
 
 let score = 0;
-let level = 1;
-let record = Number(localStorage.getItem("snakeRecord")) || 0;
 
+// El nivel desbloqueado se conserva entre partidas.
+let level = Number(
+    localStorage.getItem("snakeUnlockedLevel")
+) || 1;
+
+level = Math.min(Math.max(level, 1), 15);
+
+// Récord.
+let record = Number(
+    localStorage.getItem("snakeRecord")
+) || 0;
+
+// Estado de la partida.
 let gameInterval = null;
 let obstacleInterval = null;
 
 let running = false;
 let paused = false;
 let gameOver = false;
-let levelCompleted = false;
+
+// Comprobar si ya se completaron los 15 niveles.
+let campaignComplete =
+    localStorage.getItem("snakeCampaignComplete") === "true";
 
 document.getElementById("record").textContent = record;
+document.getElementById("level").textContent = level;
 
-function speedForLevel(currentLevel) {
-    return Math.max(
-        MINIMUM_SPEED,
-        INITIAL_SPEED - ((currentLevel - 1) * SPEED_INCREASE)
-    );
-}
 
-function startGameInterval() {
-    clearInterval(gameInterval);
-
-    // Cada 5 puntos aumenta un 0,5 % la velocidad.
-    // El cálculo parte de la velocidad base del nivel.
-    const speedBoost = Math.floor(score / 5);
-
-    const currentSpeed = Math.max(
-        MINIMUM_SPEED,
-        speedForLevel(level) /
-        Math.pow(1 + SPEED_INCREASE_PER_5_POINTS, speedBoost)
-    );
-
-    gameInterval = setInterval(gameLoop, currentSpeed);
-}
+// FUNCIONES GENERALES
 
 function randomCell() {
     return {
@@ -220,7 +222,9 @@ function samePosition(a, b) {
 }
 
 function isOccupied(position) {
-    if (snake && snake.some(part => samePosition(part, position))) {
+    if (snake && snake.some(part =>
+        samePosition(part, position)
+    )) {
         return true;
     }
 
@@ -228,12 +232,16 @@ function isOccupied(position) {
         return true;
     }
 
-    if (mines.some(mine => samePosition(mine, position))) {
+    if (mines.some(mine =>
+        samePosition(mine, position)
+    )) {
         return true;
     }
 
     if (obstacles.some(obstacle =>
-        obstacle.cells.some(cell => samePosition(cell, position))
+        obstacle.cells.some(cell =>
+            samePosition(cell, position)
+        )
     )) {
         return true;
     }
@@ -248,14 +256,23 @@ function randomFreeCell() {
     do {
         position = randomCell();
         attempts++;
-    } while (isOccupied(position) && attempts < 1000);
+    } while (
+        isOccupied(position) &&
+        attempts < 1000
+    );
 
     return position;
 }
 
+
+// COMIDA
+
 function createFood() {
     food = randomFreeCell();
 }
+
+
+// MINAS
 
 function createMines() {
     mines = [];
@@ -272,26 +289,39 @@ function createMines() {
     }
 }
 
+
+// INTERFAZ
+
 function updateInterface() {
     document.getElementById("score").textContent = score;
     document.getElementById("level").textContent = level;
     document.getElementById("record").textContent = record;
 }
 
-function startGame() {
-    // Si el nivel anterior se completó, avanzamos uno.
-    // Si se perdió, se vuelve a intentar el mismo nivel.
-    if (levelCompleted) {
-        if (level >= TOTAL_LEVELS) return;
 
-        level++;
-        levelCompleted = false;
+// INICIAR NUEVA PARTIDA
+
+function startGame() {
+
+    // Si ya se han completado los 15 niveles,
+    // no se puede iniciar otra partida.
+    if (campaignComplete) {
+        document.getElementById("message").textContent =
+            "🏆 ¡Has completado los 15 niveles! LOGRO DESBLOQUEADO";
+        return;
     }
 
     clearInterval(gameInterval);
     clearInterval(obstacleInterval);
 
-    // Cada nueva partida empieza con 0 puntos.
+    // Recuperar el siguiente nivel desbloqueado.
+    level = Number(
+        localStorage.getItem("snakeUnlockedLevel")
+    ) || 1;
+
+    level = Math.min(Math.max(level, 1), 15);
+
+    // Cada partida comienza siempre desde 0 puntos.
     score = 0;
 
     snake = [
@@ -303,7 +333,6 @@ function startGame() {
     direction = "right";
     nextDirection = "right";
 
-    food = null;
     mines = [];
     obstacles = [];
 
@@ -313,15 +342,19 @@ function startGame() {
 
     createFood();
     createMines();
+
     updateInterface();
 
     document.getElementById("message").textContent =
         "¡Nivel " + level + "! Consigue 50 puntos para completarlo.";
 
-    // Cada nivel empieza con su propia velocidad base.
+    // La velocidad inicial depende del nivel.
+    // El aumento dentro del nivel comienza desde cero.
     startGameInterval();
 
+    // Control de caducidad de obstáculos.
     obstacleInterval = setInterval(() => {
+
         if (!running || paused) return;
 
         const now = Date.now();
@@ -331,24 +364,58 @@ function startGame() {
         );
 
         draw();
+
     }, 200);
 
     draw();
 }
 
+
+// CONTROL DE VELOCIDAD
+
+function startGameInterval() {
+
+    clearInterval(gameInterval);
+
+    // Puntos conseguidos dentro de esta partida.
+    const speedBoost = Math.floor(score / 5);
+
+    // Cada 5 puntos la serpiente es un 0,5 % más rápida.
+    const currentSpeed = Math.max(
+        MINIMUM_SPEED,
+        speedForLevel(level) /
+        Math.pow(
+            1 + SPEED_INCREASE_PER_5_POINTS,
+            speedBoost
+        )
+    );
+
+    gameInterval = setInterval(
+        gameLoop,
+        currentSpeed
+    );
+}
+
+
+// PAUSA
+
 function togglePause() {
+
     if (!running || gameOver) return;
 
     paused = !paused;
 
     document.getElementById("message").textContent =
-        paused ? "⏸ PARTIDA EN PAUSA" :
-        "¡Continúa! Nivel " + level;
+        paused ? "⏸ PARTIDA EN PAUSA" : "¡Continúa!";
 
     draw();
 }
 
+
+// DIRECCIÓN
+
 function changeDirection(newDirection) {
+
     if (!running || paused || gameOver) return;
 
     const opposites = {
@@ -363,11 +430,19 @@ function changeDirection(newDirection) {
     nextDirection = newDirection;
 }
 
+
+// TECLADO
+
 document.addEventListener("keydown", function(event) {
+
     const key = event.key.toLowerCase();
 
     if ([
-        "arrowup", "arrowdown", "arrowleft", "arrowright", " "
+        "arrowup",
+        "arrowdown",
+        "arrowleft",
+        "arrowright",
+        " "
     ].includes(key)) {
         event.preventDefault();
     }
@@ -391,9 +466,14 @@ document.addEventListener("keydown", function(event) {
     if (key === " " || key === "p") {
         togglePause();
     }
+
 });
 
+
+// BUCLE PRINCIPAL
+
 function gameLoop() {
+
     if (!running || paused || gameOver) return;
 
     direction = nextDirection;
@@ -405,170 +485,276 @@ function gameLoop() {
     if (direction === "left") head.x--;
     if (direction === "right") head.x++;
 
-    // Bordes.
+    // COLISIÓN CON LOS BORDES
+
     if (
-        head.x < 0 || head.x >= SIZE ||
-        head.y < 0 || head.y >= SIZE
+        head.x < 0 ||
+        head.x >= SIZE ||
+        head.y < 0 ||
+        head.y >= SIZE
     ) {
         endGame("¡Has chocado contra la pared!");
         return;
     }
 
+    // COLISIÓN CON EL PROPIO CUERPO
+
     const eating = samePosition(head, food);
 
-    // Cuerpo de la serpiente.
-    const bodyToCheck = eating ? snake : snake.slice(0, -1);
+    const bodyToCheck = eating
+        ? snake
+        : snake.slice(0, -1);
 
-    if (bodyToCheck.some(part => samePosition(part, head))) {
+    if (bodyToCheck.some(part =>
+        samePosition(part, head)
+    )) {
         endGame("¡Te has chocado contigo mismo!");
         return;
     }
 
-    // Minas.
-    if (mines.some(mine => samePosition(mine, head))) {
+    // COLISIÓN CON MINAS
+
+    if (mines.some(mine =>
+        samePosition(mine, head)
+    )) {
         endGame("💣 ¡Has tocado una mina!");
         return;
     }
 
-    // Caducidad de obstáculos.
+    // ELIMINAR OBSTÁCULOS CADUCADOS
+
     const now = Date.now();
 
     obstacles = obstacles.filter(
         obstacle => obstacle.expiresAt > now
     );
 
-    // Colisión con obstáculos.
+    // COLISIÓN CON OBSTÁCULOS
+
     for (const obstacle of obstacles) {
-        if (obstacle.cells.some(cell => samePosition(cell, head))) {
+
+        if (obstacle.cells.some(cell =>
+            samePosition(cell, head)
+        )) {
             endGame("¡Has chocado contra un obstáculo!");
             return;
         }
+
     }
 
     snake.unshift(head);
 
+    // COMER MANZANA
+
     if (eating) {
+
         score++;
 
         updateRecord();
+
         updateInterface();
 
-        // Cada 5 puntos se recalcula la velocidad.
-        if (score % 5 === 0 && score < POINTS_PER_LEVEL) {
-            startGameInterval();
-        }
+        // COMPLETAR EL NIVEL AL LLEGAR A 50 PUNTOS.
 
-        // Al conseguir 50 puntos termina esta partida.
-        if (score >= POINTS_PER_LEVEL) {
+        if (score >= 50) {
             completeLevel();
             return;
         }
 
+        // Cada 5 puntos se recalcula la velocidad.
+        if (score % 5 === 0) {
+            startGameInterval();
+        }
+
         createFood();
 
-        // Obstáculos temporales desde el nivel 10.
-        if (level >= 10 && Math.random() < 0.30) {
+        // OBSTÁCULOS DESDE EL NIVEL 10.
+
+        if (
+            level >= 10 &&
+            Math.random() < 0.30
+        ) {
             createObstacle();
         }
 
     } else {
+
         snake.pop();
+
     }
 
+    updateInterface();
     draw();
+
 }
+
+
+// RÉCORD
 
 function updateRecord() {
+
     if (score > record) {
+
         record = score;
-        localStorage.setItem("snakeRecord", record);
-        document.getElementById("record").textContent = record;
-    }
-}
 
-function createObstacle() {
-    const horizontal = Math.random() < 0.5;
-    const length = 3 + Math.floor(Math.random() * 4);
+        localStorage.setItem(
+            "snakeRecord",
+            record
+        );
 
-    const start = randomFreeCell();
-    const cells = [];
-
-    for (let i = 0; i < length; i++) {
-        const cell = {
-            x: start.x + (horizontal ? i : 0),
-            y: start.y + (horizontal ? 0 : i)
-        };
-
-        if (
-            cell.x >= SIZE || cell.y >= SIZE ||
-            isOccupied(cell)
-        ) {
-            return;
-        }
-
-        cells.push(cell);
+        document.getElementById("record").textContent =
+            record;
     }
 
-    const duration = 5000 + Math.random() * 3000;
-
-    obstacles.push({
-        cells: cells,
-        expiresAt: Date.now() + duration
-    });
 }
+
+
+// COMPLETAR NIVEL
 
 function completeLevel() {
+
     running = false;
     gameOver = true;
-    levelCompleted = true;
 
     clearInterval(gameInterval);
     clearInterval(obstacleInterval);
 
-    if (level === TOTAL_LEVELS) {
+    // Si se ha completado el nivel 15,
+    // se termina definitivamente la campaña.
+
+    if (level === 15) {
+
+        campaignComplete = true;
+
+        localStorage.setItem(
+            "snakeCampaignComplete",
+            "true"
+        );
+
         document.getElementById("message").innerHTML =
             "🏆 ¡ENHORABUENA!<br>" +
             "LOGRO DESBLOQUEADO<br>" +
             "¡Has completado los 15 niveles!";
+
     } else {
+
+        // Desbloquear el siguiente nivel.
+        const nextLevel = level + 1;
+
+        localStorage.setItem(
+            "snakeUnlockedLevel",
+            String(nextLevel)
+        );
+
         document.getElementById("message").innerHTML =
             "🎉 ¡NIVEL " + level + " COMPLETADO!<br>" +
-            "Has conseguido 50 puntos.<br>" +
+            "Puntuación: " + score + "<br>" +
             "Pulsa «Nueva partida» para comenzar el nivel " +
-            (level + 1) + ".";
+            nextLevel + ".";
+
     }
 
     draw();
+
 }
 
+
+// PERDER PARTIDA
+
 function endGame(message) {
+
     running = false;
     gameOver = true;
-    levelCompleted = false;
 
     clearInterval(gameInterval);
     clearInterval(obstacleInterval);
 
     document.getElementById("message").textContent =
         message + " Puntuación: " + score +
-        "/50. Pulsa «Nueva partida» para reintentar el nivel " +
-        level + ".";
+        ". Pulsa «Nueva partida» para volver a intentarlo.";
+
+    // IMPORTANTE:
+    // No se modifica el nivel desbloqueado.
+    // Si pierdes, la próxima partida comienza
+    // en el mismo nivel.
 
     draw();
+
 }
 
+
+// CREAR OBSTÁCULOS
+
+function createObstacle() {
+
+    const horizontal = Math.random() < 0.5;
+
+    const length =
+        3 + Math.floor(Math.random() * 4);
+
+    const start = randomFreeCell();
+
+    const cells = [];
+
+    for (let i = 0; i < length; i++) {
+
+        const cell = {
+            x: start.x + (horizontal ? i : 0),
+            y: start.y + (horizontal ? 0 : i)
+        };
+
+        if (
+            cell.x >= SIZE ||
+            cell.y >= SIZE ||
+            isOccupied(cell)
+        ) {
+            return;
+        }
+
+        cells.push(cell);
+
+    }
+
+    // Duración aleatoria entre 5 y 8 segundos.
+    const duration = 5000 + Math.random() * 3000;
+
+    obstacles.push({
+        cells: cells,
+        expiresAt: Date.now() + duration
+    });
+
+}
+
+
+// DIBUJAR JUEGO
+
 function draw() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // Fondo.
+    ctx.clearRect(
+        0,
+        0,
+        canvas.width,
+        canvas.height
+    );
+
+    // FONDO
+
     ctx.fillStyle = "#17232d";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // Cuadrícula.
+    ctx.fillRect(
+        0,
+        0,
+        canvas.width,
+        canvas.height
+    );
+
+    // CUADRÍCULA
+
     ctx.strokeStyle = "#243541";
     ctx.lineWidth = 1;
 
     for (let i = 0; i <= SIZE; i++) {
+
         ctx.beginPath();
         ctx.moveTo(i * CELL, 0);
         ctx.lineTo(i * CELL, canvas.height);
@@ -578,12 +764,17 @@ function draw() {
         ctx.moveTo(0, i * CELL);
         ctx.lineTo(canvas.width, i * CELL);
         ctx.stroke();
+
     }
 
-    // Manzana.
+    // MANZANA
+
     if (food) {
+
         ctx.fillStyle = "#ff4141";
+
         ctx.beginPath();
+
         ctx.arc(
             food.x * CELL + CELL / 2,
             food.y * CELL + CELL / 2,
@@ -591,21 +782,28 @@ function draw() {
             0,
             Math.PI * 2
         );
+
         ctx.fill();
 
         ctx.fillStyle = "#62e879";
+
         ctx.fillRect(
             food.x * CELL + CELL / 2 - 2,
             food.y * CELL + 2,
             4,
             7
         );
+
     }
 
-    // Minas.
+    // MINAS
+
     mines.forEach(mine => {
+
         ctx.fillStyle = "#050505";
+
         ctx.beginPath();
+
         ctx.arc(
             mine.x * CELL + CELL / 2,
             mine.y * CELL + CELL / 2,
@@ -613,6 +811,7 @@ function draw() {
             0,
             Math.PI * 2
         );
+
         ctx.fill();
 
         ctx.strokeStyle = "#777";
@@ -623,29 +822,40 @@ function draw() {
         ctx.font = "15px Arial";
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
+
         ctx.fillText(
             "✹",
             mine.x * CELL + CELL / 2,
             mine.y * CELL + CELL / 2
         );
+
     });
 
-    // Obstáculos temporales.
+    // OBSTÁCULOS TEMPORALES
+
     obstacles.forEach(obstacle => {
+
         obstacle.cells.forEach(cell => {
+
             ctx.fillStyle = "#b15cff";
+
             ctx.fillRect(
                 cell.x * CELL + 2,
                 cell.y * CELL + 2,
                 CELL - 4,
                 CELL - 4
             );
+
         });
+
     });
 
-    // Serpiente.
+    // SERPIENTE
+
     snake.forEach((part, index) => {
-        ctx.fillStyle = index === 0 ? "#a0ffad" : "#39c85a";
+
+        ctx.fillStyle =
+            index === 0 ? "#a0ffad" : "#39c85a";
 
         ctx.fillRect(
             part.x * CELL + 2,
@@ -655,57 +865,94 @@ function draw() {
         );
 
         ctx.strokeStyle = "#173c24";
+
         ctx.strokeRect(
             part.x * CELL + 2,
             part.y * CELL + 2,
             CELL - 4,
             CELL - 4
         );
+
     });
 
-    // Pausa.
+    // PANTALLA DE PAUSA
+
     if (paused) {
+
         ctx.fillStyle = "rgba(0,0,0,0.65)";
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        ctx.fillRect(
+            0,
+            0,
+            canvas.width,
+            canvas.height
+        );
 
         ctx.fillStyle = "white";
         ctx.font = "bold 42px Arial";
         ctx.textAlign = "center";
+
         ctx.fillText(
             "PAUSA",
             canvas.width / 2,
             canvas.height / 2
         );
+
     }
+
 }
 
+
 // CONTROLES TÁCTILES
+
 let touchStartX = 0;
 let touchStartY = 0;
 
 canvas.addEventListener("touchstart", function(event) {
+
     const touch = event.changedTouches[0];
 
     touchStartX = touch.clientX;
     touchStartY = touch.clientY;
+
 }, { passive: true });
 
+
 canvas.addEventListener("touchend", function(event) {
+
     const touch = event.changedTouches[0];
 
     const dx = touch.clientX - touchStartX;
     const dy = touch.clientY - touchStartY;
 
-    if (Math.max(Math.abs(dx), Math.abs(dy)) < 20) return;
+    if (
+        Math.max(
+            Math.abs(dx),
+            Math.abs(dy)
+        ) < 20
+    ) {
+        return;
+    }
 
     if (Math.abs(dx) > Math.abs(dy)) {
-        changeDirection(dx > 0 ? "right" : "left");
+
+        changeDirection(
+            dx > 0 ? "right" : "left"
+        );
+
     } else {
-        changeDirection(dy > 0 ? "down" : "up");
+
+        changeDirection(
+            dy > 0 ? "down" : "up"
+        );
+
     }
+
 }, { passive: true });
 
+
 // PANTALLA INICIAL
+
 snake = [
     { x: 10, y: 10 },
     { x: 9, y: 10 },
@@ -714,10 +961,24 @@ snake = [
 
 direction = "right";
 nextDirection = "right";
+
 food = { x: 14, y: 10 };
 
 updateInterface();
 draw();
+
+if (campaignComplete) {
+
+    document.getElementById("message").textContent =
+        "🏆 ¡Has completado los 15 niveles! LOGRO DESBLOQUEADO";
+
+} else {
+
+    document.getElementById("message").textContent =
+        "Pulsa «Nueva partida» para empezar el nivel " +
+        level + ".";
+
+}
 
 </script>
 
