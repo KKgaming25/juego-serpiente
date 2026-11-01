@@ -6,7 +6,9 @@
 <title>Snake - 15 niveles</title>
 
 <style>
-* { box-sizing: border-box; }
+* {
+    box-sizing: border-box;
+}
 
 body {
     margin: 0;
@@ -51,12 +53,11 @@ h1 {
 }
 
 #message {
-    min-height: 65px;
+    min-height: 55px;
     margin: 12px 0;
     font-size: 19px;
     font-weight: bold;
     color: #62e879;
-    line-height: 1.5;
 }
 
 button {
@@ -91,7 +92,9 @@ button:hover {
     font-size: 23px;
 }
 
-.empty { visibility: hidden; }
+.empty {
+    visibility: hidden;
+}
 
 #instructions {
     color: #c7d3dc;
@@ -109,16 +112,14 @@ button:hover {
 <h1>🐍 SNAKE</h1>
 
 <div id="info">
-    <span>Puntos: <span id="score">0</span>/50</span>
+    <span>Puntos: <span id="score">0</span></span>
     <span>Nivel: <span id="level">1</span>/15</span>
     <span>Récord: <span id="record">0</span></span>
 </div>
 
 <canvas id="game" width="600" height="600"></canvas>
 
-<div id="message">
-    Pulsa «Nueva partida» para empezar el nivel 1
-</div>
+<div id="message">Pulsa «Nueva partida» para empezar</div>
 
 <div>
     <button onclick="startGame()">Nueva partida</button>
@@ -136,10 +137,10 @@ button:hover {
 </div>
 
 <div id="instructions">
-    Ordenador: flechas o WASD para moverte.<br>
-    ESPACIO o P: pausar y reanudar.<br>
+    Ordenador: utiliza las flechas o WASD para moverte.<br>
+    Pulsa ESPACIO o P para pausar y reanudar.<br>
     Móvil: utiliza los botones o desliza el dedo sobre el tablero.<br>
-    Come manzanas y evita las minas y los obstáculos.
+    Come manzanas, evita las minas y los obstáculos.
 </div>
 
 </div>
@@ -151,23 +152,27 @@ const ctx = canvas.getContext("2d");
 const SIZE = 20;
 const CELL = canvas.width / SIZE;
 
-// CONFIGURACIÓN DE VELOCIDAD
+// VELOCIDAD
+// Todas las partidas comienzan siempre a 230 ms.
+// Cada nivel reduce el intervalo solo 3 ms.
 const INITIAL_SPEED = 230;
 const SPEED_INCREASE = 3;
 const MINIMUM_SPEED = 150;
 
-// Aumento del 0,5 % cada 5 puntos.
+// Aumento de velocidad del 0,5 % cada 5 puntos.
 const SPEED_INCREASE_PER_5_POINTS = 0.005;
-
-// PROGRESIÓN
-const POINTS_PER_LEVEL = 50;
-const TOTAL_LEVELS = 15;
+    
+function speedForLevel(level) {
+    return Math.max(
+        MINIMUM_SPEED,
+        INITIAL_SPEED - ((level - 1) * SPEED_INCREASE)
+    );
+}
 
 let snake;
 let direction;
 let nextDirection;
 let food;
-
 let mines = [];
 let obstacles = [];
 
@@ -181,32 +186,8 @@ let obstacleInterval = null;
 let running = false;
 let paused = false;
 let gameOver = false;
-let levelCompleted = false;
 
 document.getElementById("record").textContent = record;
-
-function speedForLevel(currentLevel) {
-    return Math.max(
-        MINIMUM_SPEED,
-        INITIAL_SPEED - ((currentLevel - 1) * SPEED_INCREASE)
-    );
-}
-
-function startGameInterval() {
-    clearInterval(gameInterval);
-
-    // Cada 5 puntos aumenta un 0,5 % la velocidad.
-    // El cálculo parte de la velocidad base del nivel.
-    const speedBoost = Math.floor(score / 5);
-
-    const currentSpeed = Math.max(
-        MINIMUM_SPEED,
-        speedForLevel(level) /
-        Math.pow(1 + SPEED_INCREASE_PER_5_POINTS, speedBoost)
-    );
-
-    gameInterval = setInterval(gameLoop, currentSpeed);
-}
 
 function randomCell() {
     return {
@@ -279,20 +260,15 @@ function updateInterface() {
 }
 
 function startGame() {
-    // Si el nivel anterior se completó, avanzamos uno.
-    // Si se perdió, se vuelve a intentar el mismo nivel.
-    if (levelCompleted) {
-        if (level >= TOTAL_LEVELS) return;
-
-        level++;
-        levelCompleted = false;
-    }
-
+    // Detener cualquier temporizador de la partida anterior.
     clearInterval(gameInterval);
     clearInterval(obstacleInterval);
 
-    // Cada nueva partida empieza con 0 puntos.
+    // IMPORTANTE:
+    // Reiniciamos completamente la partida.
+    // La velocidad vuelve SIEMPRE a la inicial.
     score = 0;
+    level = 1;
 
     snake = [
         { x: 10, y: 10 },
@@ -303,7 +279,6 @@ function startGame() {
     direction = "right";
     nextDirection = "right";
 
-    food = null;
     mines = [];
     obstacles = [];
 
@@ -316,16 +291,16 @@ function startGame() {
     updateInterface();
 
     document.getElementById("message").textContent =
-        "¡Nivel " + level + "! Consigue 50 puntos para completarlo.";
+        "¡Buena suerte! Nivel 1";
 
-    // Cada nivel empieza con su propia velocidad base.
+    // Siempre comienza con INITIAL_SPEED.
     startGameInterval();
 
+    // Actualiza la caducidad de los obstáculos.
     obstacleInterval = setInterval(() => {
         if (!running || paused) return;
 
         const now = Date.now();
-
         obstacles = obstacles.filter(
             obstacle => obstacle.expiresAt > now
         );
@@ -336,14 +311,28 @@ function startGame() {
     draw();
 }
 
+function startGameInterval() {
+    clearInterval(gameInterval);
+
+    const pointsInLevel = score % 50;
+    const speedBoost = Math.floor(pointsInLevel / 5);
+
+    const currentSpeed = Math.max(
+        MINIMUM_SPEED,
+        speedForLevel(level) /
+        Math.pow(1 + SPEED_INCREASE_PER_5_POINTS, speedBoost)
+    );
+
+    gameInterval = setInterval(gameLoop, currentSpeed);
+}}
+
 function togglePause() {
     if (!running || gameOver) return;
 
     paused = !paused;
 
     document.getElementById("message").textContent =
-        paused ? "⏸ PARTIDA EN PAUSA" :
-        "¡Continúa! Nivel " + level;
+        paused ? "⏸ PARTIDA EN PAUSA" : "¡Continúa!";
 
     draw();
 }
@@ -405,7 +394,7 @@ function gameLoop() {
     if (direction === "left") head.x--;
     if (direction === "right") head.x++;
 
-    // Bordes.
+    // Chocar contra los bordes.
     if (
         head.x < 0 || head.x >= SIZE ||
         head.y < 0 || head.y >= SIZE
@@ -414,9 +403,9 @@ function gameLoop() {
         return;
     }
 
+    // Chocar contra el propio cuerpo.
     const eating = samePosition(head, food);
 
-    // Cuerpo de la serpiente.
     const bodyToCheck = eating ? snake : snake.slice(0, -1);
 
     if (bodyToCheck.some(part => samePosition(part, head))) {
@@ -424,20 +413,20 @@ function gameLoop() {
         return;
     }
 
-    // Minas.
+    // Chocar contra una mina.
     if (mines.some(mine => samePosition(mine, head))) {
         endGame("💣 ¡Has tocado una mina!");
         return;
     }
 
-    // Caducidad de obstáculos.
+    // Eliminar obstáculos caducados.
     const now = Date.now();
 
     obstacles = obstacles.filter(
         obstacle => obstacle.expiresAt > now
     );
 
-    // Colisión con obstáculos.
+    // Chocar contra obstáculos.
     for (const obstacle of obstacles) {
         if (obstacle.cells.some(cell => samePosition(cell, head))) {
             endGame("¡Has chocado contra un obstáculo!");
@@ -449,19 +438,27 @@ function gameLoop() {
 
     if (eating) {
         score++;
-
         updateRecord();
-        updateInterface();
 
-        // Cada 5 puntos se recalcula la velocidad.
-        if (score % 5 === 0 && score < POINTS_PER_LEVEL) {
-            startGameInterval();
+        // Cada manzana vale un punto.
+        // Cada 50 puntos se supera un nivel.
+        if (score >= 750) {
+            winGame();
+            return;
         }
 
-        // Al conseguir 50 puntos termina esta partida.
-        if (score >= POINTS_PER_LEVEL) {
-            completeLevel();
-            return;
+        const newLevel = Math.floor(score / 50) + 1;
+
+        if (newLevel > level) {
+            level = newLevel;
+            createMines();
+            updateInterface();
+
+            document.getElementById("message").textContent =
+                "🎉 ¡NIVEL " + level + " SUPERADO!";
+
+            // La velocidad solo cambia al subir de nivel.
+            startGameInterval();
         }
 
         createFood();
@@ -475,6 +472,7 @@ function gameLoop() {
         snake.pop();
     }
 
+    updateInterface();
     draw();
 }
 
@@ -517,42 +515,30 @@ function createObstacle() {
     });
 }
 
-function completeLevel() {
-    running = false;
-    gameOver = true;
-    levelCompleted = true;
-
-    clearInterval(gameInterval);
-    clearInterval(obstacleInterval);
-
-    if (level === TOTAL_LEVELS) {
-        document.getElementById("message").innerHTML =
-            "🏆 ¡ENHORABUENA!<br>" +
-            "LOGRO DESBLOQUEADO<br>" +
-            "¡Has completado los 15 niveles!";
-    } else {
-        document.getElementById("message").innerHTML =
-            "🎉 ¡NIVEL " + level + " COMPLETADO!<br>" +
-            "Has conseguido 50 puntos.<br>" +
-            "Pulsa «Nueva partida» para comenzar el nivel " +
-            (level + 1) + ".";
-    }
-
-    draw();
-}
-
 function endGame(message) {
     running = false;
     gameOver = true;
-    levelCompleted = false;
 
     clearInterval(gameInterval);
     clearInterval(obstacleInterval);
 
     document.getElementById("message").textContent =
-        message + " Puntuación: " + score +
-        "/50. Pulsa «Nueva partida» para reintentar el nivel " +
-        level + ".";
+        message + " Puntuación: " + score;
+
+    draw();
+}
+
+function winGame() {
+    running = false;
+    gameOver = true;
+
+    clearInterval(gameInterval);
+    clearInterval(obstacleInterval);
+
+    document.getElementById("message").innerHTML =
+        "🏆 ¡ENHORABUENA!<br>" +
+        "LOGRO DESBLOQUEADO<br>" +
+        "¡Has completado los 15 niveles!";
 
     draw();
 }
@@ -663,7 +649,7 @@ function draw() {
         );
     });
 
-    // Pausa.
+    // Pantalla de pausa.
     if (paused) {
         ctx.fillStyle = "rgba(0,0,0,0.65)";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -679,7 +665,7 @@ function draw() {
     }
 }
 
-// CONTROLES TÁCTILES
+// Controles táctiles mediante deslizamiento.
 let touchStartX = 0;
 let touchStartY = 0;
 
@@ -705,7 +691,7 @@ canvas.addEventListener("touchend", function(event) {
     }
 }, { passive: true });
 
-// PANTALLA INICIAL
+// Dibujar pantalla inicial.
 snake = [
     { x: 10, y: 10 },
     { x: 9, y: 10 },
