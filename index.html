@@ -1,986 +1,506 @@
+```html
 <!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Snake - 15 niveles</title>
-
+<title>Snake - Campaña de 15 niveles</title>
 <style>
-* {
-    box-sizing: border-box;
+*{box-sizing:border-box}
+body{
+ margin:0;padding:15px;background:#101820;color:white;
+ font-family:Arial,sans-serif;text-align:center;
 }
-
-body {
-    margin: 0;
-    padding: 15px;
-    background: #101820;
-    color: white;
-    font-family: Arial, sans-serif;
-    text-align: center;
+h1{color:#55ef83;margin:8px 0}
+#game-container{max-width:620px;margin:auto}
+#stats{
+ display:flex;justify-content:space-around;flex-wrap:wrap;
+ gap:8px;margin:12px 0;font-weight:bold
 }
-
-h1 {
-    color: #62e879;
-    margin: 10px 0 15px;
+.stat{background:#253746;padding:9px 13px;border-radius:8px}
+canvas{
+ display:block;width:min(92vw,600px);height:min(92vw,600px);
+ max-width:600px;max-height:600px;margin:12px auto;
+ background:#17252e;border:3px solid #55ef83;border-radius:5px;
+ touch-action:none
 }
-
-#game-container {
-    width: 100%;
-    max-width: 620px;
-    margin: auto;
+#message{
+ min-height:48px;color:#ffe66d;font-weight:bold;
+ font-size:18px;margin:10px
 }
-
-#info {
-    display: flex;
-    justify-content: space-around;
-    flex-wrap: wrap;
-    gap: 10px;
-    margin-bottom: 12px;
-    font-size: 17px;
-    font-weight: bold;
+button{
+ border:0;border-radius:9px;padding:12px 18px;
+ margin:5px;background:#55ef83;color:#102018;
+ font-weight:bold;font-size:15px;cursor:pointer
 }
-
-#game {
-    display: block;
-    width: 100%;
-    max-width: 600px;
-    height: auto;
-    margin: auto;
-    background: #17232d;
-    border: 3px solid #62e879;
-    border-radius: 8px;
-    touch-action: none;
+button:active{transform:scale(.96)}
+.controls{
+ display:grid;grid-template-columns:repeat(3,60px);
+ justify-content:center;gap:6px;margin:12px auto
 }
-
-#message {
-    min-height: 55px;
-    margin: 12px 0;
-    font-size: 19px;
-    font-weight: bold;
-    color: #62e879;
-}
-
-button {
-    border: none;
-    border-radius: 8px;
-    padding: 12px 20px;
-    margin: 5px;
-    background: #62e879;
-    color: #102018;
-    font-size: 16px;
-    font-weight: bold;
-    cursor: pointer;
-}
-
-button:hover {
-    background: #42c95c;
-}
-
-#controls {
-    margin-top: 15px;
-    display: grid;
-    grid-template-columns: repeat(3, 65px);
-    justify-content: center;
-    gap: 7px;
-}
-
-#controls button {
-    width: 65px;
-    height: 55px;
-    margin: 0;
-    padding: 0;
-    font-size: 23px;
-}
-
-.empty {
-    visibility: hidden;
-}
-
-#instructions {
-    color: #c7d3dc;
-    font-size: 13px;
-    margin-top: 15px;
-    line-height: 1.5;
-}
+.controls button{margin:0;padding:13px 5px;font-size:20px}
+.empty{visibility:hidden}
+.small{font-size:13px;color:#c5d0d8}
 </style>
 </head>
-
 <body>
-
 <div id="game-container">
-
 <h1>🐍 SNAKE</h1>
 
-<div id="info">
-    <span>Puntos: <span id="score">0</span></span>
-    <span>Nivel: <span id="level">1</span>/15</span>
-    <span>Récord: <span id="record">0</span></span>
+<div id="stats">
+ <div class="stat">Nivel: <span id="level">1</span>/15</div>
+ <div class="stat">Puntos: <span id="score">0</span>/50</div>
+ <div class="stat">Récord: <span id="record">0</span></div>
 </div>
 
 <canvas id="game" width="600" height="600"></canvas>
 
-<div id="message">Pulsa «Nueva partida» para empezar</div>
+<div id="message">Pulsa «Nueva partida» para comenzar</div>
 
 <div>
-    <button onclick="startGame()">Nueva partida</button>
-    <button onclick="togglePause()">Pausar / Reanudar</button>
+ <button id="startBtn">Nueva partida</button>
+ <button id="pauseBtn">Pausar</button>
 </div>
 
-<div id="controls">
-    <button class="empty"></button>
-    <button onclick="changeDirection('up')">▲</button>
-    <button class="empty"></button>
-
-    <button onclick="changeDirection('left')">◀</button>
-    <button onclick="changeDirection('down')">▼</button>
-    <button onclick="changeDirection('right')">▶</button>
+<div class="controls">
+ <button class="empty"> </button>
+ <button data-dir="up">⬆️</button>
+ <button class="empty"> </button>
+ <button data-dir="left">⬅️</button>
+ <button data-dir="down">⬇️</button>
+ <button data-dir="right">➡️</button>
 </div>
 
-<div id="instructions">
-    Ordenador: utiliza las flechas o WASD para moverte.<br>
-    Pulsa ESPACIO o P para pausar y reanudar.<br>
-    Móvil: utiliza los botones o desliza el dedo sobre el tablero.<br>
-    Come manzanas, evita las minas y los obstáculos.
-</div>
-
+<p class="small">
+ Controles: flechas o WASD. En móvil, utiliza los botones o desliza el dedo.
+ Cada manzana suma 1 punto. Necesitas 50 puntos para superar cada nivel.
+</p>
 </div>
 
 <script>
+"use strict";
 
-const canvas = document.getElementById("game");
-const ctx = canvas.getContext("2d");
+/* CONFIGURACIÓN */
+const SIZE=20;
+const CELL=30;
+const INITIAL_SPEED=230;
+const SPEED_INCREASE=3;
+const MINIMUM_SPEED=150;
+const SPEED_INCREASE_PER_5_POINTS=0.005;
+const POINTS_TO_WIN=50;
+const MAX_LEVEL=15;
 
-const SIZE = 20;
-const CELL = canvas.width / SIZE;
-
-// CONFIGURACIÓN DE VELOCIDAD
-const INITIAL_SPEED = 230;
-const SPEED_INCREASE = 3;
-const MINIMUM_SPEED = 150;
-
-// Aumento del 0,5 % cada 5 puntos.
-const SPEED_INCREASE_PER_5_POINTS = 0.005;
-
-function speedForLevel(level) {
-    return Math.max(
-        MINIMUM_SPEED,
-        INITIAL_SPEED - ((level - 1) * SPEED_INCREASE)
-    );
+/* ALMACENAMIENTO SEGURO */
+function safeGet(key){
+ try{return localStorage.getItem(key)}catch(e){return null}
+}
+function safeSet(key,value){
+ try{localStorage.setItem(key,value)}catch(e){}
 }
 
-// VARIABLES DEL JUEGO
+/* ELEMENTOS */
+const canvas=document.getElementById("game");
+const ctx=canvas.getContext("2d");
+const levelEl=document.getElementById("level");
+const scoreEl=document.getElementById("score");
+const recordEl=document.getElementById("record");
+const messageEl=document.getElementById("message");
+const startBtn=document.getElementById("startBtn");
+const pauseBtn=document.getElementById("pauseBtn");
 
-let snake;
-let direction;
-let nextDirection;
-let food;
-
-let mines = [];
-let obstacles = [];
-
-let score = 0;
-
-// El nivel desbloqueado se conserva entre partidas.
-let level = Number(
-    localStorage.getItem("snakeUnlockedLevel")
-) || 1;
-
-level = Math.min(Math.max(level, 1), 15);
-
-// Récord.
-let record = Number(
-    localStorage.getItem("snakeRecord")
-) || 0;
-
-// Estado de la partida.
-let gameInterval = null;
-let obstacleInterval = null;
-
-let running = false;
-let paused = false;
-let gameOver = false;
-
-// Comprobar si ya se completaron los 15 niveles.
-let campaignComplete =
-    localStorage.getItem("snakeCampaignComplete") === "true";
-
-document.getElementById("record").textContent = record;
-document.getElementById("level").textContent = level;
-
-
-// FUNCIONES GENERALES
-
-function randomCell() {
-    return {
-        x: Math.floor(Math.random() * SIZE),
-        y: Math.floor(Math.random() * SIZE)
-    };
+if(!ctx){
+ messageEl.textContent="Error: no se pudo iniciar el canvas.";
+ throw new Error("Canvas no disponible");
 }
 
-function samePosition(a, b) {
-    return a.x === b.x && a.y === b.y;
+/* ESTADO */
+let unlockedLevel=Math.max(1,Math.min(MAX_LEVEL,
+ Number(safeGet("snakeUnlockedLevel"))||1));
+let record=Number(safeGet("snakeRecord"))||0;
+let campaignComplete=safeGet("snakeCampaignComplete")==="true";
+
+let level=unlockedLevel;
+let score=0;
+let snake=[];
+let food={x:10,y:10};
+let mines=[];
+let obstacles=[];
+let direction={x:1,y:0};
+let nextDirection={x:1,y:0};
+let gameInterval=null;
+let obstacleTimeout=null;
+let running=false;
+let paused=false;
+let gameOver=false;
+let won=false;
+let touchStart=null;
+
+/* UTILIDADES */
+function randomCell(){
+ return {x:Math.floor(Math.random()*SIZE),y:Math.floor(Math.random()*SIZE)};
+}
+function same(a,b){return a.x===b.x&&a.y===b.y}
+function occupied(p){
+ return snake.some(s=>same(s,p))||
+ mines.some(m=>same(m,p))||
+ obstacles.some(o=>same(o,p));
+}
+function placeFood(){
+ let p,tries=0;
+ do{
+  p=randomCell();tries++;
+ }while(occupied(p)&&tries<1000);
+ food=p;
+}
+function speedForLevel(l){
+ return Math.max(MINIMUM_SPEED,INITIAL_SPEED-((l-1)*SPEED_INCREASE));
+}
+function currentSpeed(){
+ const boost=Math.floor(score/5);
+ return Math.max(MINIMUM_SPEED,
+ speedForLevel(level)/
+ Math.pow(1+SPEED_INCREASE_PER_5_POINTS,boost));
+}
+function startGameInterval(){
+ clearInterval(gameInterval);
+ gameInterval=setInterval(gameLoop,currentSpeed());
+}
+function updateInterface(){
+ levelEl.textContent=level;
+ scoreEl.textContent=score;
+ recordEl.textContent=record;
 }
 
-function isOccupied(position) {
-    if (snake && snake.some(part =>
-        samePosition(part, position)
-    )) {
-        return true;
-    }
+/* DIBUJO */
+function draw(){
+ ctx.clearRect(0,0,canvas.width,canvas.height);
 
-    if (food && samePosition(food, position)) {
-        return true;
-    }
+ ctx.fillStyle="#17252e";
+ ctx.fillRect(0,0,600,600);
 
-    if (mines.some(mine =>
-        samePosition(mine, position)
-    )) {
-        return true;
-    }
+ /* Cuadrícula */
+ ctx.strokeStyle="rgba(255,255,255,.09)";
+ ctx.lineWidth=1;
+ for(let i=0;i<=SIZE;i++){
+  ctx.beginPath();
+  ctx.moveTo(i*CELL,0);
+  ctx.lineTo(i*CELL,600);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(0,i*CELL);
+  ctx.lineTo(600,i*CELL);
+  ctx.stroke();
+ }
 
-    if (obstacles.some(obstacle =>
-        obstacle.cells.some(cell =>
-            samePosition(cell, position)
-        )
-    )) {
-        return true;
-    }
+ /* Obstáculos */
+ for(const o of obstacles){
+  ctx.fillStyle="#9b59b6";
+  ctx.fillRect(o.x*CELL+2,o.y*CELL+2,CELL-4,CELL-4);
+ }
 
-    return false;
+ /* Minas */
+ for(const m of mines){
+  ctx.fillStyle="#050505";
+  ctx.beginPath();
+  ctx.arc(m.x*CELL+15,m.y*CELL+15,12,0,Math.PI*2);
+  ctx.fill();
+  ctx.strokeStyle="#777";
+  ctx.lineWidth=2;
+  ctx.stroke();
+  ctx.strokeStyle="#ddd";
+  ctx.beginPath();
+  ctx.moveTo(m.x*CELL+15,m.y*CELL+2);
+  ctx.lineTo(m.x*CELL+15,m.y*CELL-3);
+  ctx.stroke();
+ }
+
+ /* Manzana */
+ ctx.fillStyle="#ff3b30";
+ ctx.beginPath();
+ ctx.arc(food.x*CELL+15,food.y*CELL+16,11,0,Math.PI*2);
+ ctx.fill();
+ ctx.fillStyle="#65d46e";
+ ctx.fillRect(food.x*CELL+15,food.y*CELL+2,4,8);
+
+ /* Serpiente */
+ snake.forEach((part,i)=>{
+  ctx.fillStyle=i===0?"#a4ff83":"#55c878";
+  ctx.fillRect(part.x*CELL+2,part.y*CELL+2,CELL-4,CELL-4);
+  if(i===0){
+   ctx.fillStyle="#102018";
+   const ex=direction.x===1?22:direction.x===-1?8:15;
+   const ey=direction.y===1?22:direction.y===-1?8:15;
+   ctx.beginPath();ctx.arc(part.x*CELL+ex-4,part.y*CELL+ey-3,2,0,7);ctx.fill();
+   ctx.beginPath();ctx.arc(part.x*CELL+ex+4,part.y*CELL+ey-3,2,0,7);ctx.fill();
+  }
+ });
+
+ if(paused){
+  overlay("PAUSA");
+ }
+ if(gameOver){
+  overlay("FIN DE LA PARTIDA");
+ }
+ if(won){
+  overlay("¡NIVEL COMPLETADO!");
+ }
+}
+function overlay(text){
+ ctx.fillStyle="rgba(0,0,0,.65)";
+ ctx.fillRect(0,240,600,120);
+ ctx.fillStyle="#fff";
+ ctx.font="bold 34px Arial";
+ ctx.textAlign="center";
+ ctx.fillText(text,300,310);
 }
 
-function randomFreeCell() {
-    let position;
-    let attempts = 0;
-
-    do {
-        position = randomCell();
-        attempts++;
-    } while (
-        isOccupied(position) &&
-        attempts < 1000
-    );
-
-    return position;
+/* MINAS Y OBSTÁCULOS */
+function createMines(){
+ mines=[];
+ if(level<5)return;
+ const count=Math.min(2+Math.floor((level-5)/2),8);
+ for(let i=0;i<count;i++){
+  let p=randomCell(),tries=0;
+  while((occupied(p)||same(p,food))&&tries++<500)p=randomCell();
+  if(!occupied(p)&&!same(p,food))mines.push(p);
+ }
+}
+function createObstacles(){
+ obstacles=[];
+ if(level<10)return;
+ const count=Math.min(3+Math.floor((level-10)/2),8);
+ for(let i=0;i<count;i++){
+  let p=randomCell(),tries=0;
+  while((occupied(p)||same(p,food))&&tries++<500)p=randomCell();
+  if(!occupied(p)&&!same(p,food))obstacles.push(p);
+ }
+ const duration=5000+Math.random()*3000;
+ clearTimeout(obstacleTimeout);
+ obstacleTimeout=setTimeout(()=>{
+  obstacles=[];
+  draw();
+ },duration);
 }
 
+/* PARTIDA */
+function startGame(){
+ clearInterval(gameInterval);
+ clearTimeout(obstacleTimeout);
 
-// COMIDA
+ if(campaignComplete){
+  level=MAX_LEVEL;
+  messageEl.textContent="¡Campaña completada! Has desbloqueado todos los niveles.";
+  updateInterface();
+  draw();
+  return;
+ }
 
-function createFood() {
-    food = randomFreeCell();
+ level=unlockedLevel;
+ score=0;
+ snake=[
+  {x:9,y:10},
+  {x:8,y:10},
+  {x:7,y:10}
+ ];
+ direction={x:1,y:0};
+ nextDirection={x:1,y:0};
+ mines=[];
+ obstacles=[];
+ running=true;
+ paused=false;
+ gameOver=false;
+ won=false;
+
+ createMines();
+ placeFood();
+ createObstacles();
+
+ messageEl.textContent="¡Consigue 50 puntos para superar el nivel!";
+ pauseBtn.textContent="Pausar";
+ updateInterface();
+ draw();
+ startGameInterval();
 }
 
-
-// MINAS
-
-function createMines() {
-    mines = [];
-
-    if (level < 5) return;
-
-    const numberOfMines = Math.min(
-        1 + Math.floor((level - 5) / 2),
-        6
-    );
-
-    for (let i = 0; i < numberOfMines; i++) {
-        mines.push(randomFreeCell());
-    }
+function endGame(){
+ clearInterval(gameInterval);
+ clearTimeout(obstacleTimeout);
+ running=false;
+ paused=false;
+ gameOver=true;
+ messageEl.textContent="Has perdido. Pulsa Nueva partida para reintentar el nivel "+level+".";
+ draw();
 }
 
+function completeLevel(){
+ clearInterval(gameInterval);
+ clearTimeout(obstacleTimeout);
+ running=false;
+ won=true;
 
-// INTERFAZ
-
-function updateInterface() {
-    document.getElementById("score").textContent = score;
-    document.getElementById("level").textContent = level;
-    document.getElementById("record").textContent = record;
+ if(level>=MAX_LEVEL){
+  campaignComplete=true;
+  safeSet("snakeCampaignComplete","true");
+  unlockedLevel=MAX_LEVEL;
+  safeSet("snakeUnlockedLevel",unlockedLevel);
+  messageEl.textContent="🏆 ¡LOGRO DESBLOQUEADO! ¡Has completado los 15 niveles!";
+ }else{
+  unlockedLevel=Math.max(unlockedLevel,level+1);
+  safeSet("snakeUnlockedLevel",unlockedLevel);
+  messageEl.textContent="¡Nivel "+level+" superado! Pulsa Nueva partida para comenzar el nivel "+unlockedLevel+".";
+ }
+ updateInterface();
+ draw();
 }
 
+/* LÓGICA */
+function gameLoop(){
+ if(!running||paused||gameOver||won)return;
 
-// INICIAR NUEVA PARTIDA
+ direction=nextDirection;
+ const head={
+  x:snake[0].x+direction.x,
+  y:snake[0].y+direction.y
+ };
 
-function startGame() {
+ /* Paredes */
+ if(head.x<0||head.x>=SIZE||head.y<0||head.y>=SIZE){
+  endGame();return;
+ }
 
-    // Si ya se han completado los 15 niveles,
-    // no se puede iniciar otra partida.
-    if (campaignComplete) {
-        document.getElementById("message").textContent =
-            "🏆 ¡Has completado los 15 niveles! LOGRO DESBLOQUEADO";
-        return;
-    }
+ const eating=same(head,food);
+ const bodyToCheck=eating?snake:snake.slice(0,-1);
 
-    clearInterval(gameInterval);
-    clearInterval(obstacleInterval);
+ if(bodyToCheck.some(p=>same(p,head))){
+  endGame();return;
+ }
+ if(mines.some(m=>same(m,head))||
+ obstacles.some(o=>same(o,head))){
+  endGame();return;
+ }
 
-    // Recuperar el siguiente nivel desbloqueado.
-    level = Number(
-        localStorage.getItem("snakeUnlockedLevel")
-    ) || 1;
+ snake.unshift(head);
 
-    level = Math.min(Math.max(level, 1), 15);
+ if(eating){
+  score++;
+  if(score>record){
+   record=score;
+   safeSet("snakeRecord",record);
+  }
+  updateInterface();
 
-    // Cada partida comienza siempre desde 0 puntos.
-    score = 0;
+  if(score>=POINTS_TO_WIN){
+   completeLevel();return;
+  }
 
-    snake = [
-        { x: 10, y: 10 },
-        { x: 9, y: 10 },
-        { x: 8, y: 10 }
-    ];
+  placeFood();
+  if(level>=10&&Math.random()<0.18)createObstacles();
+ }else{
+  snake.pop();
+ }
 
-    direction = "right";
-    nextDirection = "right";
+ draw();
 
-    mines = [];
-    obstacles = [];
-
-    running = true;
-    paused = false;
-    gameOver = false;
-
-    createFood();
-    createMines();
-
-    updateInterface();
-
-    document.getElementById("message").textContent =
-        "¡Nivel " + level + "! Consigue 50 puntos para completarlo.";
-
-    // La velocidad inicial depende del nivel.
-    // El aumento dentro del nivel comienza desde cero.
-    startGameInterval();
-
-    // Control de caducidad de obstáculos.
-    obstacleInterval = setInterval(() => {
-
-        if (!running || paused) return;
-
-        const now = Date.now();
-
-        obstacles = obstacles.filter(
-            obstacle => obstacle.expiresAt > now
-        );
-
-        draw();
-
-    }, 200);
-
-    draw();
+ /* Ajustar velocidad progresivamente */
+ if(eating)startGameInterval();
 }
 
+/* CONTROLES */
+function changeDirection(dir){
+ if(!running||paused||gameOver||won)return;
 
-// CONTROL DE VELOCIDAD
+ const dirs={
+  up:{x:0,y:-1},
+  down:{x:0,y:1},
+  left:{x:-1,y:0},
+  right:{x:1,y:0}
+ };
+ const d=dirs[dir];
+ if(!d)return;
 
-function startGameInterval() {
-
-    clearInterval(gameInterval);
-
-    // Puntos conseguidos dentro de esta partida.
-    const speedBoost = Math.floor(score / 5);
-
-    // Cada 5 puntos la serpiente es un 0,5 % más rápida.
-    const currentSpeed = Math.max(
-        MINIMUM_SPEED,
-        speedForLevel(level) /
-        Math.pow(
-            1 + SPEED_INCREASE_PER_5_POINTS,
-            speedBoost
-        )
-    );
-
-    gameInterval = setInterval(
-        gameLoop,
-        currentSpeed
-    );
+ if(d.x===-direction.x&&d.y===-direction.y)return;
+ nextDirection=d;
 }
 
-
-// PAUSA
-
-function togglePause() {
-
-    if (!running || gameOver) return;
-
-    paused = !paused;
-
-    document.getElementById("message").textContent =
-        paused ? "⏸ PARTIDA EN PAUSA" : "¡Continúa!";
-
-    draw();
-}
-
-
-// DIRECCIÓN
-
-function changeDirection(newDirection) {
-
-    if (!running || paused || gameOver) return;
-
-    const opposites = {
-        up: "down",
-        down: "up",
-        left: "right",
-        right: "left"
-    };
-
-    if (opposites[newDirection] === direction) return;
-
-    nextDirection = newDirection;
-}
-
-
-// TECLADO
-
-document.addEventListener("keydown", function(event) {
-
-    const key = event.key.toLowerCase();
-
-    if ([
-        "arrowup",
-        "arrowdown",
-        "arrowleft",
-        "arrowright",
-        " "
-    ].includes(key)) {
-        event.preventDefault();
-    }
-
-    if (key === "arrowup" || key === "w") {
-        changeDirection("up");
-    }
-
-    if (key === "arrowdown" || key === "s") {
-        changeDirection("down");
-    }
-
-    if (key === "arrowleft" || key === "a") {
-        changeDirection("left");
-    }
-
-    if (key === "arrowright" || key === "d") {
-        changeDirection("right");
-    }
-
-    if (key === " " || key === "p") {
-        togglePause();
-    }
-
+document.addEventListener("keydown",e=>{
+ const keys={
+  ArrowUp:"up",w:"up",W:"up",
+  ArrowDown:"down",s:"down",S:"down",
+  ArrowLeft:"left",a:"left",A:"left",
+  ArrowRight:"right",d:"right",D:"right"
+ };
+ if(keys[e.key]){
+  e.preventDefault();
+  changeDirection(keys[e.key]);
+ }
 });
 
+document.querySelectorAll("[data-dir]").forEach(btn=>{
+ btn.addEventListener("click",()=>{
+  changeDirection(btn.dataset.dir);
+ });
+});
 
-// BUCLE PRINCIPAL
+canvas.addEventListener("touchstart",e=>{
+ const t=e.changedTouches[0];
+ touchStart={x:t.clientX,y:t.clientY};
+},{passive:true});
 
-function gameLoop() {
+canvas.addEventListener("touchend",e=>{
+ if(!touchStart)return;
+ const t=e.changedTouches[0];
+ const dx=t.clientX-touchStart.x;
+ const dy=t.clientY-touchStart.y;
+ if(Math.max(Math.abs(dx),Math.abs(dy))>20){
+  if(Math.abs(dx)>Math.abs(dy)){
+   changeDirection(dx>0?"right":"left");
+  }else{
+   changeDirection(dy>0?"down":"up");
+  }
+ }
+ touchStart=null;
+},{passive:true});
 
-    if (!running || paused || gameOver) return;
+/* BOTONES */
+startBtn.addEventListener("click",startGame);
 
-    direction = nextDirection;
+pauseBtn.addEventListener("click",()=>{
+ if(!running||gameOver||won)return;
+ paused=!paused;
+ pauseBtn.textContent=paused?"Reanudar":"Pausar";
+ messageEl.textContent=paused?"Partida pausada":"¡Sigue jugando!";
+ if(!paused)draw();
+ else draw();
+});
 
-    const head = { ...snake[0] };
-
-    if (direction === "up") head.y--;
-    if (direction === "down") head.y++;
-    if (direction === "left") head.x--;
-    if (direction === "right") head.x++;
-
-    // COLISIÓN CON LOS BORDES
-
-    if (
-        head.x < 0 ||
-        head.x >= SIZE ||
-        head.y < 0 ||
-        head.y >= SIZE
-    ) {
-        endGame("¡Has chocado contra la pared!");
-        return;
-    }
-
-    // COLISIÓN CON EL PROPIO CUERPO
-
-    const eating = samePosition(head, food);
-
-    const bodyToCheck = eating
-        ? snake
-        : snake.slice(0, -1);
-
-    if (bodyToCheck.some(part =>
-        samePosition(part, head)
-    )) {
-        endGame("¡Te has chocado contigo mismo!");
-        return;
-    }
-
-    // COLISIÓN CON MINAS
-
-    if (mines.some(mine =>
-        samePosition(mine, head)
-    )) {
-        endGame("💣 ¡Has tocado una mina!");
-        return;
-    }
-
-    // ELIMINAR OBSTÁCULOS CADUCADOS
-
-    const now = Date.now();
-
-    obstacles = obstacles.filter(
-        obstacle => obstacle.expiresAt > now
-    );
-
-    // COLISIÓN CON OBSTÁCULOS
-
-    for (const obstacle of obstacles) {
-
-        if (obstacle.cells.some(cell =>
-            samePosition(cell, head)
-        )) {
-            endGame("¡Has chocado contra un obstáculo!");
-            return;
-        }
-
-    }
-
-    snake.unshift(head);
-
-    // COMER MANZANA
-
-    if (eating) {
-
-        score++;
-
-        updateRecord();
-
-        updateInterface();
-
-        // COMPLETAR EL NIVEL AL LLEGAR A 50 PUNTOS.
-
-        if (score >= 50) {
-            completeLevel();
-            return;
-        }
-
-        // Cada 5 puntos se recalcula la velocidad.
-        if (score % 5 === 0) {
-            startGameInterval();
-        }
-
-        createFood();
-
-        // OBSTÁCULOS DESDE EL NIVEL 10.
-
-        if (
-            level >= 10 &&
-            Math.random() < 0.30
-        ) {
-            createObstacle();
-        }
-
-    } else {
-
-        snake.pop();
-
-    }
-
-    updateInterface();
-    draw();
-
+/* INICIO SEGURO: pinta el juego incluso antes de empezar */
+function initialScreen(){
+ level=unlockedLevel;
+ score=0;
+ snake=[
+  {x:9,y:10},
+  {x:8,y:10},
+  {x:7,y:10}
+ ];
+ direction={x:1,y:0};
+ nextDirection={x:1,y:0};
+ mines=[];
+ obstacles=[];
+ placeFood();
+ updateInterface();
+ draw();
 }
 
-
-// RÉCORD
-
-function updateRecord() {
-
-    if (score > record) {
-
-        record = score;
-
-        localStorage.setItem(
-            "snakeRecord",
-            record
-        );
-
-        document.getElementById("record").textContent =
-            record;
-    }
-
+try{
+ initialScreen();
+ if(campaignComplete){
+  messageEl.textContent="🏆 Campaña completada. ¡Enhorabuena!";
+ }
+}catch(error){
+ messageEl.textContent="Error al iniciar: "+error.message;
+ console.error(error);
 }
-
-
-// COMPLETAR NIVEL
-
-function completeLevel() {
-
-    running = false;
-    gameOver = true;
-
-    clearInterval(gameInterval);
-    clearInterval(obstacleInterval);
-
-    // Si se ha completado el nivel 15,
-    // se termina definitivamente la campaña.
-
-    if (level === 15) {
-
-        campaignComplete = true;
-
-        localStorage.setItem(
-            "snakeCampaignComplete",
-            "true"
-        );
-
-        document.getElementById("message").innerHTML =
-            "🏆 ¡ENHORABUENA!<br>" +
-            "LOGRO DESBLOQUEADO<br>" +
-            "¡Has completado los 15 niveles!";
-
-    } else {
-
-        // Desbloquear el siguiente nivel.
-        const nextLevel = level + 1;
-
-        localStorage.setItem(
-            "snakeUnlockedLevel",
-            String(nextLevel)
-        );
-
-        document.getElementById("message").innerHTML =
-            "🎉 ¡NIVEL " + level + " COMPLETADO!<br>" +
-            "Puntuación: " + score + "<br>" +
-            "Pulsa «Nueva partida» para comenzar el nivel " +
-            nextLevel + ".";
-
-    }
-
-    draw();
-
-}
-
-
-// PERDER PARTIDA
-
-function endGame(message) {
-
-    running = false;
-    gameOver = true;
-
-    clearInterval(gameInterval);
-    clearInterval(obstacleInterval);
-
-    document.getElementById("message").textContent =
-        message + " Puntuación: " + score +
-        ". Pulsa «Nueva partida» para volver a intentarlo.";
-
-    // IMPORTANTE:
-    // No se modifica el nivel desbloqueado.
-    // Si pierdes, la próxima partida comienza
-    // en el mismo nivel.
-
-    draw();
-
-}
-
-
-// CREAR OBSTÁCULOS
-
-function createObstacle() {
-
-    const horizontal = Math.random() < 0.5;
-
-    const length =
-        3 + Math.floor(Math.random() * 4);
-
-    const start = randomFreeCell();
-
-    const cells = [];
-
-    for (let i = 0; i < length; i++) {
-
-        const cell = {
-            x: start.x + (horizontal ? i : 0),
-            y: start.y + (horizontal ? 0 : i)
-        };
-
-        if (
-            cell.x >= SIZE ||
-            cell.y >= SIZE ||
-            isOccupied(cell)
-        ) {
-            return;
-        }
-
-        cells.push(cell);
-
-    }
-
-    // Duración aleatoria entre 5 y 8 segundos.
-    const duration = 5000 + Math.random() * 3000;
-
-    obstacles.push({
-        cells: cells,
-        expiresAt: Date.now() + duration
-    });
-
-}
-
-
-// DIBUJAR JUEGO
-
-function draw() {
-
-    ctx.clearRect(
-        0,
-        0,
-        canvas.width,
-        canvas.height
-    );
-
-    // FONDO
-
-    ctx.fillStyle = "#17232d";
-
-    ctx.fillRect(
-        0,
-        0,
-        canvas.width,
-        canvas.height
-    );
-
-    // CUADRÍCULA
-
-    ctx.strokeStyle = "#243541";
-    ctx.lineWidth = 1;
-
-    for (let i = 0; i <= SIZE; i++) {
-
-        ctx.beginPath();
-        ctx.moveTo(i * CELL, 0);
-        ctx.lineTo(i * CELL, canvas.height);
-        ctx.stroke();
-
-        ctx.beginPath();
-        ctx.moveTo(0, i * CELL);
-        ctx.lineTo(canvas.width, i * CELL);
-        ctx.stroke();
-
-    }
-
-    // MANZANA
-
-    if (food) {
-
-        ctx.fillStyle = "#ff4141";
-
-        ctx.beginPath();
-
-        ctx.arc(
-            food.x * CELL + CELL / 2,
-            food.y * CELL + CELL / 2,
-            CELL * 0.38,
-            0,
-            Math.PI * 2
-        );
-
-        ctx.fill();
-
-        ctx.fillStyle = "#62e879";
-
-        ctx.fillRect(
-            food.x * CELL + CELL / 2 - 2,
-            food.y * CELL + 2,
-            4,
-            7
-        );
-
-    }
-
-    // MINAS
-
-    mines.forEach(mine => {
-
-        ctx.fillStyle = "#050505";
-
-        ctx.beginPath();
-
-        ctx.arc(
-            mine.x * CELL + CELL / 2,
-            mine.y * CELL + CELL / 2,
-            CELL * 0.38,
-            0,
-            Math.PI * 2
-        );
-
-        ctx.fill();
-
-        ctx.strokeStyle = "#777";
-        ctx.lineWidth = 2;
-        ctx.stroke();
-
-        ctx.fillStyle = "white";
-        ctx.font = "15px Arial";
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-
-        ctx.fillText(
-            "✹",
-            mine.x * CELL + CELL / 2,
-            mine.y * CELL + CELL / 2
-        );
-
-    });
-
-    // OBSTÁCULOS TEMPORALES
-
-    obstacles.forEach(obstacle => {
-
-        obstacle.cells.forEach(cell => {
-
-            ctx.fillStyle = "#b15cff";
-
-            ctx.fillRect(
-                cell.x * CELL + 2,
-                cell.y * CELL + 2,
-                CELL - 4,
-                CELL - 4
-            );
-
-        });
-
-    });
-
-    // SERPIENTE
-
-    snake.forEach((part, index) => {
-
-        ctx.fillStyle =
-            index === 0 ? "#a0ffad" : "#39c85a";
-
-        ctx.fillRect(
-            part.x * CELL + 2,
-            part.y * CELL + 2,
-            CELL - 4,
-            CELL - 4
-        );
-
-        ctx.strokeStyle = "#173c24";
-
-        ctx.strokeRect(
-            part.x * CELL + 2,
-            part.y * CELL + 2,
-            CELL - 4,
-            CELL - 4
-        );
-
-    });
-
-    // PANTALLA DE PAUSA
-
-    if (paused) {
-
-        ctx.fillStyle = "rgba(0,0,0,0.65)";
-
-        ctx.fillRect(
-            0,
-            0,
-            canvas.width,
-            canvas.height
-        );
-
-        ctx.fillStyle = "white";
-        ctx.font = "bold 42px Arial";
-        ctx.textAlign = "center";
-
-        ctx.fillText(
-            "PAUSA",
-            canvas.width / 2,
-            canvas.height / 2
-        );
-
-    }
-
-}
-
-
-// CONTROLES TÁCTILES
-
-let touchStartX = 0;
-let touchStartY = 0;
-
-canvas.addEventListener("touchstart", function(event) {
-
-    const touch = event.changedTouches[0];
-
-    touchStartX = touch.clientX;
-    touchStartY = touch.clientY;
-
-}, { passive: true });
-
-
-canvas.addEventListener("touchend", function(event) {
-
-    const touch = event.changedTouches[0];
-
-    const dx = touch.clientX - touchStartX;
-    const dy = touch.clientY - touchStartY;
-
-    if (
-        Math.max(
-            Math.abs(dx),
-            Math.abs(dy)
-        ) < 20
-    ) {
-        return;
-    }
-
-    if (Math.abs(dx) > Math.abs(dy)) {
-
-        changeDirection(
-            dx > 0 ? "right" : "left"
-        );
-
-    } else {
-
-        changeDirection(
-            dy > 0 ? "down" : "up"
-        );
-
-    }
-
-}, { passive: true });
-
-
-// PANTALLA INICIAL
-
-snake = [
-    { x: 10, y: 10 },
-    { x: 9, y: 10 },
-    { x: 8, y: 10 }
-];
-
-direction = "right";
-nextDirection = "right";
-
-food = { x: 14, y: 10 };
-
-updateInterface();
-draw();
-
-if (campaignComplete) {
-
-    document.getElementById("message").textContent =
-        "🏆 ¡Has completado los 15 niveles! LOGRO DESBLOQUEADO";
-
-} else {
-
-    document.getElementById("message").textContent =
-        "Pulsa «Nueva partida» para empezar el nivel " +
-        level + ".";
-
-}
-
 </script>
-
 </body>
 </html>
+```
