@@ -153,11 +153,11 @@ const SIZE = 20;
 const CELL = canvas.width / SIZE;
 
 // VELOCIDAD
-// Todas las partidas comienzan siempre a 460 ms.
+// Todas las partidas comienzan siempre a 230 ms.
 // Cada nivel reduce el intervalo solo 3 ms.
-const INITIAL_SPEED = 460;
+const INITIAL_SPEED = 230;
 const SPEED_INCREASE = 3;
-const MINIMUM_SPEED = 300;
+const MINIMUM_SPEED = 150;
 
 function speedForLevel(level) {
     return Math.max(
